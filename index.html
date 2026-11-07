@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1120">
+  <meta name="description" content="Suivi quotidien du bilan calorique et du poids.">
+  <title>⚖️ Balance calorique</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.svg">
+  <style>
+    :root{color-scheme:dark;--bg:#0b1120;--surface:#121b31;--surface2:#18223c;--line:#233050;--text:#e9eef8;--muted:#97a3c1;--blue:#6fa9ff;--green:#3edc9c;--yellow:#ffd54a;--red:#ff6b7d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);min-height:100vh}.wrap{max-width:860px;margin:auto;padding:calc(24px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}header{display:flex;align-items:center;gap:14px;margin-bottom:24px}header img{width:54px;height:54px}h1{font-size:clamp(24px,6vw,34px);margin:0}header p{margin:4px 0 0;color:var(--muted)}.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 10px 28px #0003}.card h2{margin:0 0 16px;font-size:19px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.field{display:grid;gap:6px;color:var(--muted);font-size:14px}.field input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--text);font:600 19px system-ui}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}button{border:0;border-radius:10px;padding:11px 16px;background:var(--blue);color:#0b1120;font-weight:700;font-size:14px;cursor:pointer}button.secondary{border:1px solid var(--line);background:transparent;color:var(--text)}.result{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{background:var(--surface2);border-radius:12px;padding:14px}.stat span{display:block;color:var(--muted);font-size:13px}.stat strong{display:block;font-size:26px;margin-top:5px}.history{width:100%;border-collapse:collapse}.history th,.history td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}.history th{color:var(--muted);font-size:12px}.empty{color:var(--muted);padding:12px 0}.notice{font-size:13px;color:var(--muted);line-height:1.55}.good{color:var(--green)}.bad{color:var(--red)}@media(max-width:480px){.card{padding:16px}.history th,.history td{padding:8px 4px;font-size:13px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header><img src="icon-192.svg" alt=""><div><h1>Balance calorique</h1><p id="dateLabel"></p></div></header>
+    <section class="card" aria-labelledby="todayTitle"><h2 id="todayTitle">Aujourd’hui</h2><form id="dayForm"><div class="grid">
+      <label class="field">Calories consommées<input id="consumed" type="number" min="0" step="10" inputmode="numeric" placeholder="0"></label>
+      <label class="field">Calories brûlées<input id="burned" type="number" min="0" step="10" inputmode="numeric" placeholder="0"></label>
+      <label class="field">Poids (kg)<input id="weight" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0,0"></label>
+      <label class="field">Masse grasse (%)<input id="fat" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="0,0"></label>
+    </div><div class="actions"><button type="submit">Enregistrer</button><button type="button" class="secondary" id="exportBtn">Télécharger mes données</button></div></form></section>
+    <section class="card"><h2>Bilan du jour</h2><div class="result"><div class="stat"><span>Balance (brûlées − consommées)</span><strong id="balance">—</strong></div><div class="stat"><span>Poids enregistré</span><strong id="weightStat">—</strong></div><div class="stat"><span>Masse grasse</span><strong id="fatStat">—</strong></div></div></section>
+    <section class="card"><h2>Historique récent</h2><div id="history"></div></section>
+    <p class="notice">Tes informations sont conservées uniquement dans le stockage local de ce navigateur. Elles ne sont pas envoyées à un serveur. Pense à télécharger une sauvegarde pour les conserver ou les transférer.</p>
+  </main>
+<script>
+'use strict';
+const KEY='balanceApp';
+const $=id=>document.getElementById(id);
+const dateKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const read=()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'{}');return d&&typeof d==='object'?d:{}}catch(_){return {}}};
+let data=read();data.dailyData=data.dailyData&&typeof data.dailyData==='object'?data.dailyData:{};
+function fmt(v,d=0){return Number(v).toLocaleString('fr-FR',{maximumFractionDigits:d,minimumFractionDigits:d})}
+function render(){const today=dateKey(),entry=data.dailyData[today]||{};$('dateLabel').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());$('consumed').value=entry.consumed||'';$('burned').value=entry.burned||'';$('weight').value=entry.weight||'';$('fat').value=entry.bf||'';const balance=(Number(entry.burned)||0)-(Number(entry.consumed)||0);$('balance').textContent=entry.consumed||entry.burned?fmt(balance)+' kcal':'—';$('balance').className=entry.consumed||entry.burned?(balance>=0?'good':'bad'):'';$('weightStat').textContent=entry.weight?fmt(entry.weight,1)+' kg':'—';$('fatStat').textContent=entry.bf?fmt(entry.bf,1)+' %':'—';const rows=Object.keys(data.dailyData).sort().reverse().slice(0,14);$('history').innerHTML=rows.length?'<div style="overflow-x:auto"><table class="history"><thead><tr><th>Date</th><th>Consommées</th><th>Brûlées</th><th>Balance</th><th>Poids</th></tr></thead><tbody>'+rows.map(k=>{const x=data.dailyData[k]||{},b=(Number(x.burned)||0)-(Number(x.consumed)||0);return '<tr><td>'+new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',year:'numeric'}).format(new Date(k+'T12:00:00'))+'</td><td>'+(x.consumed?fmt(x.consumed):'—')+'</td><td>'+(x.burned?fmt(x.burned):'—')+'</td><td>'+(x.consumed||x.burned?fmt(b):'—')+'</td><td>'+(x.weight?fmt(x.weight,1)+' kg':'—')+'</td></tr>'}).join('')+'</tbody></table></div>':'<p class="empty">Aucune donnée enregistrée pour le moment.</p>'}
+$('dayForm').addEventListener('submit',e=>{e.preventDefault();const n=id=>Number($(id).value)||null;const entry={consumed:n('consumed')||0,burned:n('burned')||0,weight:n('weight'),bf:n('fat')};if(Object.values(entry).some(Boolean))data.dailyData[dateKey()]=entry;else delete data.dailyData[dateKey()];try{localStorage.setItem(KEY,JSON.stringify(data));render()}catch(_){alert('Impossible d’enregistrer dans ce navigateur.')}});
+$('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='balance-backup-'+dateKey()+'.json';a.click();URL.revokeObjectURL(url)});
+render();
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
