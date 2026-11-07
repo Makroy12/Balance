@@ -1,5 +1,5 @@
 // Balance : cache hors connexion
-const CACHE = 'balance-v1';
+const CACHE = 'balance-v2';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.svg', './icon-512.svg', './icon-maskable-512.svg', './apple-touch-icon.svg'];
 const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
 
